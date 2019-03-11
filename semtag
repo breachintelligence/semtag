@@ -144,18 +144,18 @@ function compare_versions {
   # Identifiers should compare with the ASCII order.
   local __identifierfirst=${__first[3]}
   local __identifiersecond=${__second[3]}
-  if [[ -n "$__identifierfirst" ]] && [[ -n "$__identifiersecond" ]]; then
-    if [[ "$__identifierfirst" > "$__identifiersecond" ]]; then
+  if [[ -n $__identifierfirst && -n $__identifiersecond ]]; then
+    if [[ $__identifierfirst > $__identifiersecond ]]; then
       eval "$lv=1"
       return 0
-    elif [[ "$__identifierfirst" < "$__identifiersecond" ]]; then
+    elif [[ $__identifierfirst < $__identifiersecond ]]; then
       eval "$lv=-1"
       return 0
     fi
-  elif [[ -z "$__identifierfirst" ]] && [[ -n "$__identifiersecond" ]]; then
+  elif [[ -z $__identifierfirst && -n $__identifiersecond ]]; then
     eval "$lv=1"
     return 0
-  elif [[ -n "$__identifierfirst" ]] && [[ -z "$__identifiersecond" ]]; then
+  elif [[ -n $__identifierfirst && -z $__identifiersecond ]]; then
     eval "$lv=-1"
     return 0
   fi
@@ -195,7 +195,7 @@ function explode_identifier {
   if [[ $__identifier =~ $IDENTIFIER_REGEX ]] ; then
     local __id=${BASH_REMATCH[1]}
     local __number=${BASH_REMATCH[2]}
-    if [[ -z "$__number" ]]; then
+    if [[ -z $__number ]]; then
       __number=1
     fi
     eval "$__result=(\"$__id\" \"$__number\")"
@@ -238,8 +238,8 @@ function get_latest {
       do
         __current=${__taglist[i]}
         explode_version "${__taglist[i]}" ver
-        if [ -n "$ver" ]; then
-          if [ -z "${ver[3]}" ]; then
+        if [[ -n $ver ]]; then
+          if [[ -z ${ver[3]} ]]; then
             get_latest_of_two $finalversion "$__current" finalversion
             get_latest_of_two $lastversion $finalversion lastversion
           else
@@ -287,23 +287,23 @@ function get_next_version {
 
 function bump_version {
   ## First we try to get the next version based on the existing last one
-  if [ "$scope" == "auto" ]; then
+  if [[ $scope == "auto" ]]; then
     get_scope_auto scope
   fi
 
   local __candidatefromlast=$FIRST_VERSION
   local __explodedlast
   explode_version $lastversion __explodedlast
-  if [[ -n "${__explodedlast[3]}" ]]; then
+  if [[ -n ${__explodedlast[3]} ]]; then
     # Last version is not final
     local __idlast
     explode_identifier "${__explodedlast[3]}" __idlast
     
     # We get the last, given the desired id based on the scope
     __candidatefromlast="v${__explodedlast[0]}.${__explodedlast[1]}.${__explodedlast[2]}"
-    if [[ -n "$identifier" ]]; then
+    if [[ -n $identifier ]]; then
       local __nextid="$identifier.1"
-      if [ "$identifier" == "${__idlast[0]}" ]; then
+      if [[ $identifier == "${__idlast[0]}" ]]; then
         # We target the same identifier as the last so we increase one
         __nextid="$identifier.$(( __idlast[1]+1 ))"
         __candidatefromlast="$__candidatefromlast-$__nextid"
@@ -312,7 +312,7 @@ function bump_version {
         __candidatefromlast="$__candidatefromlast-$__nextid"
         local __comparedwithlast
         compare_versions "$__candidatefromlast" $lastversion __comparedwithlast
-        if [ "$__comparedwithlast" == -1 ]; then
+        if [[ $__comparedwithlast == "-1" ]]; then
           get_next_version "$__candidatefromlast" "$scope" __candidatefromlast
           __candidatefromlast="$__candidatefromlast-$__nextid"
         fi
@@ -323,7 +323,7 @@ function bump_version {
   # Then we try to get the version based on the latest final one
   local __candidatefromfinal=$FIRST_VERSION
   get_next_version $finalversion "$scope" __candidatefromfinal
-  if [[ -n "$identifier" ]]; then
+  if [[ -n $identifier ]]; then
     __candidatefromfinal="$__candidatefromfinal-$identifier.1"
   fi
 
@@ -365,21 +365,21 @@ function increase_version {
     __version=$forcedversion
   fi
 
-  if [ "$displayonly" == "true" ]; then
+  if [[ $displayonly == "true" ]]; then
     echo "$__version"
   else
-    if [ "$forcetag" == "false" ]; then
+    if [[ $forcetag == "false" ]]; then
       check_git_dirty_status
     fi
     local __commitlist
-    if [ "$finalversion" == "$FIRST_VERSION" ] || [ "$hasversiontag" != "true" ]; then
+    if [[ $finalversion == "$FIRST_VERSION" || $hasversiontag != "true" ]]; then
       __commitlist="$(git log --pretty=oneline | cat)"
     else
       __commitlist="$(git log --pretty=oneline $finalversion... | cat)"
     fi
 
     # If we are forcing a bump, we add bump to the commit list
-    if [[ -z $__commitlist && "$forcetag" == "true" ]]; then
+    if [[ -z $__commitlist && $forcetag == "true" ]]; then
       __commitlist="bump"
     fi
 
@@ -395,13 +395,13 @@ $__commitlist"
       # We check we have info on the user
       local __username
       __username=$(git config user.name)
-      if [ -z "$__username" ]; then
+      if [[ -z $__username ]]; then
         __username=$(id -u -n)
         git config user.name "$__username"
       fi
       local __useremail
       __useremail=$(git config user.email)
-      if [ -z "$__useremail" ]; then
+      if [[ -z $__useremail ]]; then
         __useremail=$(hostname)
         git config user.email "$__username@$__useremail"
       fi
@@ -429,13 +429,13 @@ function check_git_dirty_status {
   local __repostatus=
   get_work_tree_status __repostatus
 
-  if [ "$__repostatus" == "uncommitted" ]; then
+  if [[ $__repostatus == "uncommitted" ]]; then
     echo "ERROR: You have uncommitted changes"
     git status --porcelain
     exit 1
   fi
 
-  if [ "$__repostatus" == "unstaged" ]; then
+  if [[ $__repostatus == "unstaged" ]]; then
     echo "ERROR: You have unstaged changes"
     git status --porcelain
     exit 1
@@ -491,9 +491,9 @@ function get_scope_auto {
   get_sincetag_lines $finalversion __since
 
   local __percentage=0
-  if [ "$__total" != "0" ]; then
+  if [[ $__total != 0 ]]; then
     local __percentage=$(( 100*__since/__total ))
-    if [ $__percentage -gt "10" ]; then
+    if [[ $__percentage -gt 10 ]]; then
       __scope="minor"
     else
       __scope="patch"
@@ -501,7 +501,7 @@ function get_scope_auto {
   fi
 
   eval "$1=$__scope"
-  if [[ -n "$__verbose" ]]; then
+  if [[ -n $__verbose ]]; then
     echo "[Auto Scope] Percentage of lines changed: $__percentage"
     echo "[Auto Scope] : $__scope"
   fi
@@ -525,7 +525,7 @@ function get_work_tree_status {
 
 function get_current {
   local __commitcount
-  if [ "$hasversiontag" == "true" ]; then
+  if [[ $hasversiontag == "true" ]]; then
     __commitcount="$(git rev-list $lastversion.. --count)"
   else
     __commitcount="$(git rev-list --count HEAD)"
@@ -533,33 +533,33 @@ function get_current {
   local __status=
   get_work_tree_status __status
   
-  if [ "$__commitcount" == "0" ] && [ -z "$__status" ]; then
+  if [[ $__commitcount == "0" && -z $__status ]]; then
     eval "$1=$lastversion"
   else
     local __buildinfo
     __buildinfo="$(git rev-parse --short HEAD)"
     local __currentbranch
     __currentbranch="$(git rev-parse --abbrev-ref HEAD)"
-    if [ "$__currentbranch" != "master" ]; then
+    if [[ $__currentbranch != "master" ]]; then
       __buildinfo="$__currentbranch.$__buildinfo"
     fi
 
     local __suffix=
-    if [ "$__commitcount" != "0" ]; then
-      if [ -n "$__suffix" ]; then
+    if [[ $__commitcount != "0" ]]; then
+      if [[ -n $__suffix ]]; then
         __suffix="$__suffix."
       fi
       __suffix="$__suffix$__commitcount"
     fi
-    if [ -n "$__status" ]; then
-      if [ -n "$__suffix" ]; then
+    if [[ -n $__status ]]; then
+      if [[ -n $__suffix ]]; then
         __suffix="$__suffix."
       fi
       __suffix="$__suffix$__status"
     fi
 
     __suffix="$__suffix+$__buildinfo"
-    if [ "$lastversion" == "$finalversion" ]; then
+    if [[ $lastversion == "$finalversion" ]]; then
       scope="patch"
       identifier=
       local __bumped=
@@ -590,8 +590,8 @@ case $ACTION in
   final)
     init
     diff=$(git diff master | cat)
-    if [ "$forcetag" == "false" ]; then
-      if [ -n "$diff" ]; then
+    if [[ $forcetag == "false" ]]; then
+      if [[ -n $diff ]]; then
         echo "ERROR: Branch must be updated with master for final versions"
         exit 1
       fi
