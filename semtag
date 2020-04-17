@@ -652,6 +652,7 @@ function create_build_string {
   fi
   if [[ "$__buildstring" =~ ":b" ]] ; then
     branchname="$(git rev-parse --abbrev-ref HEAD)"
+    branchname=$(string_replace "$branchname" "[^a-zA-Z0-9]" "")
   fi
   if [[ "$__buildstring" =~ ":d" ]] ; then
     dateymd="$(date +"%Y%m%d")"
@@ -661,7 +662,7 @@ function create_build_string {
   __buildstring=$(string_replace "$__buildstring" ":b" "$branchname")
   __buildstring=$(string_replace "$__buildstring" ":d" "$dateymd")
   
-  echo $__buildstring
+  echo "$__buildstring"
 }
 
 function get_current {
