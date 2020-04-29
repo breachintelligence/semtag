@@ -21,6 +21,7 @@ forcedversion=
 versionname=
 identifier=
 buildformat=":b.:c"
+ancestoronly=false
 
 HELP="\
 Usage:
@@ -50,6 +51,7 @@ Options:
                :b - current branch
                :c - current commit short format
                :d - date yymmdd format
+  -a         Only consider ancestor tags when finding latest tag.
               
 Commands:
   --help     Print this help message.
@@ -75,7 +77,7 @@ ACTION="$1"
 shift
 
 # We get the parameters
-while getopts "v:s:ofpb:" opt; do
+while getopts "v:s:aofpb:" opt; do
   case $opt in
     v)
       forcedversion="$OPTARG"
@@ -94,6 +96,9 @@ while getopts "v:s:ofpb:" opt; do
       ;;
     b)
       buildformat="$OPTARG"
+      ;;
+    a)
+      ancestoronly=true
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -286,6 +291,8 @@ function compare_identifiers {
     eval "$__result=-1"
     return 0
   fi
+  
+  eval "$__result=0"
 }
 
 # Assigns a 2 size array with the identifier, having the identifier at pos 0, and the number in pos 1
@@ -712,12 +719,32 @@ function get_current {
   fi
 }
 
+#for each semver check if it is a strict ancestor of the current commit
+function ancestor_tag_list {
+  local __tagarray="${TAG_ARRAY[@]}"
+  local result=( )
+  
+  for tag in "${TAG_ARRAY[@]}" ; do
+    if [[ "$tag" =~ $SEMVER_REGEX ]] ; then
+      git merge-base --is-ancestor $tag HEAD && result+=( "$tag" )
+    fi
+  done
+  
+  eval "$1=( ${result[@]} )"
+}
+
 function init {
   git fetch > /dev/null
   TAGS="$(git tag)"
   IFS=$'\n' read -rd '' -a TAG_ARRAY <<<"$TAGS"
 
-  get_latest "${TAG_ARRAY[@]}"
+  if  "$ancestoronly" ; then 
+    ancestor_tag_list ancestortags
+    get_latest "${ancestortags[@]}"
+  else
+    get_latest "${TAG_ARRAY[@]}"
+  fi
+  
   current="$(git rev-parse --abbrev-ref HEAD)"
 }
 
